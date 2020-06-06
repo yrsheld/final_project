@@ -24,10 +24,10 @@ namespace TA
     #define ESC "\033"
     class ASCII: public GUIInterface
     {
-        const static int GRAPH_HIGHT = 7+15;    //7+15
+        const static int GRAPH_HIGHT = 7+15;
         const static int GRAPH_WIDTH = 80;
         
-        const static int TEXT_HIGHT = 10;  //10
+        const static int TEXT_HIGHT = 10;
         const static int TEXT_WIDTH = 80;
 
         std::string m_preparedText;
@@ -40,15 +40,13 @@ namespace TA
 
         void gotoxy(int y, int x)
         {
-            //printf( ESC "\033[%d;%df", y, x);
-            printf("hello" "\033[%d;%df", y, x);
+            printf( ESC "\033[%d;%df", y, x);
         }
 
         void updateTextBuf()
         {
             std::stringstream ss(m_textbuf);
-            //(test)remove the ban
-            //const std::string ban(TEXT_WIDTH, '-');
+            const std::string ban(TEXT_WIDTH, '-');
             std::string tmp, last;
 
             m_preparedText.clear();
@@ -63,25 +61,20 @@ namespace TA
                     last = "";
                 else 
                     last = last.substr(TEXT_WIDTH);
-                    
-                //m_preparedText = tmp + m_preparedText;
     
                 m_preparedText = tmp + "\n" + m_preparedText;
             }
-            //(test)remove the ban
             m_textbuf = m_textbuf.substr(0, TEXT_HIGHT * TEXT_WIDTH);
-            
-            //original:
-            //m_preparedText =  ban + "\n" + m_preparedText + ban;
+            m_preparedText =  ban + "\n" + m_preparedText + ban;
         }
 
         void showText()
         {
-            //gotoxy(GRAPH_HIGHT+1, 0);
-            //printf( ESC "[J" );
-           // gotoxy(GRAPH_HIGHT+1, 0);
+            gotoxy(GRAPH_HIGHT+1, 0);
+            printf( ESC "[J" );
+            gotoxy(GRAPH_HIGHT+1, 0);
             puts(m_preparedText.c_str());
-            //gotoxy(GRAPH_HIGHT+TEXT_HIGHT+1, 0);
+            gotoxy(GRAPH_HIGHT+TEXT_HIGHT+1, 0);
             std::fflush(stdout);
         }
 
@@ -89,7 +82,6 @@ namespace TA
         virtual void title() override
         {
             cls();
-            puts("hello\n");
             puts(
 R"( _   _ _ _             _____  _______   ____   __
 | | | | | |           |  _  ||  _  \ \ / /\ \ / /
@@ -98,8 +90,6 @@ R"( _   _ _ _             _____  _______   ____   __
 | |_| | | |_| | | (_| \ \_/ /\ \_/ / /^\ \/ /^\ \
  \___/|_|\__|_|  \__,_|\___/  \___/\/   \/\/   \/
 )");
-            
-        
         }
 
         virtual void appendText(std::string str)
@@ -120,10 +110,9 @@ R"( _   _ _ _             _____  _______   ____   __
 
         virtual void updateGame(UltraBoard b)
         {
-            gotoxy(6, 0);  //7+3
+            gotoxy(7+1, 0);
             const std::string buf(20, ' ');
-           
-            
+
             for (int i=0;i<9;++i)
             {
                 std::printf("%s", buf.c_str());
@@ -138,24 +127,8 @@ R"( _   _ _ _             _____  _______   ____   __
                     std::puts(std::string(12,'-').c_str());
                 }
             }
-           
-            std::puts(std::string(16,'#').c_str());
-            
-            //std::printf("\n");
 
-            //gotoxy(GRAPH_HIGHT+TEXT_HIGHT, 0);
-            //gotoxy(GRAPH_HIGHT+TEXT_HIGHT, 0);
-            //appendText("");
-            //appendText("");
-            //gotoxy((GRAPH_HIGHT+TEXT_HIGHT)*2, 0);
-            //test
-            //puts("hay");  
-            //m_preparedText +="\n";
-            updateTextBuf();
-            updateTextBuf();
-            showText(); showText();
-            //appendText("\n");
-            //std::putchar('\n');
+            gotoxy(GRAPH_HIGHT+TEXT_HIGHT+1, 0);
         }
     };
     #undef ESC
