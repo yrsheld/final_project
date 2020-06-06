@@ -16,6 +16,9 @@ namespace TA
 {
     class UltraOOXX
     {
+    /*memebrs: two players (AIInterface*): m_p1, m_p2,
+            	one GUIInterface* : gui,
+                one Ultrabord : Mainboard, */
     public:
         UltraOOXX(
             std::chrono::milliseconds runtime_limit = std::chrono::milliseconds(1000)
@@ -38,51 +41,30 @@ namespace TA
             if( !prepareState() ) return ;
 
             //Todo: Play Game
-            //putToGui("Hello world %d", 123);//print in gui
-            //puts("Hello man\n"); 
-            //std::printf("Hello man\n");
+            putToGui("Hello world %d\n", 123);
             updateGuiGame();
-                
-                //test
-                //MainBoard.get(1,1) = BoardInterface::Tag::X ;
-                //MainBoard.get(2,2) = BoardInterface::Tag::O ;
-                //MainBoard.get(3,3) = BoardInterface::Tag::X ;
-                //updateGuiGame(); 
-                //MainBoard.get(4,4) = BoardInterface::Tag::X ;
-                //MainBoard.get(0,0) = BoardInterface::Tag::O ;
-                //MainBoard.get(5,6) = BoardInterface::Tag::X ;
-                //MainBoard.get(2,8) = BoardInterface::Tag::X ;
-                //updateGuiGame();
-                //MainBoard.reset();
-                //test
-                
-            int x = 81;
-            while (x--) {   //checkGameover()   
-                    
+
+            while (!checkGameover()) {    //judge win or lose      
                 round++;
-
-                //test
-                AIInterface *first = m_P1;
-                AIInterface *second = m_P2;
-                //test
-                
-                BoardInterface::Tag tag ;//= BoardInterface::Tag::O;
-                
-                if(x%2) tag = BoardInterface::Tag::X;
-                else tag = BoardInterface::Tag::O;
-                //test
-
-                
-                if (!playOneRound(first, tag, second)) { //if first & second = nullptr then program will die here
-                    //TODO: what will happen if player does not follow the rule?(or the game does not finished properly)
+                if(round%2){
+                	AIInterface *first = m_P1;
+                	AIInterface *second = m_P2;
+                	BoardInterface::Tag tag = BoardInterface::Tag::O;
+				}
+				else{
+					AIInterface *first = m_P2;
+                	AIInterface *second = m_P1;
+                	BoardInterface::Tag tag = BoardInterface::Tag::X;
+				}
+               
+                if (!playOneRound(first, tag, second)) {  //one move
+                    //the "first" AI made illegal move, lose the game!
+                    putToGui(round%2?"Player1":"Player2", " lost!\n");
+                    updateGuiGame();
+                    exit(-1);
                 }
                 updateGuiGame();
-                
-                //switch player???
-                
             } 
-                //TODO: what will happen if who wins?
-
         } 
 
    private:
@@ -92,41 +74,98 @@ namespace TA
         }
 
         bool playOneRound(AIInterface *user, BoardInterface::Tag tag, AIInterface *enemy)
-        {
-            //call (AIInterface *user)'s (queryWhereToPut function) to choose a place to set tag
-            auto pos = call(&AIInterface::queryWhereToPut, user, MainBoard);
-               
-            //catch the step that does not follow the rule
-            if(pos.first>8 || pos.second>8 || pos.first<0 || pos.second<0)
-            {
-                std::cout<<"put illegal place!"<<std::endl;
-
-                //TODO: catch other kinds of illegal step
-                exit(-1);
-            } 
-
-            //update the MainBoard
-            MainBoard.get(pos.first,pos.second) = tag;
-            
-            //indicate that this round has finished safely
-            return true;
+        {               
+            auto pos = call(&AIInterface::queryWhereToPut, user, MainBoard);  //make next step
+			
+			//check whether the pos is legal
+			//1. out of range
+			if(pos.first>8 || pos.first<0 || pos.second>8 || pos.second <0){
+				std::cout << "pos out of range\n"; 
+				return false;	
+			}
+			//2. already occupied
+			if(MainBoard.get(pos.first,pos.second)!=BoardInterface::Tag::None){
+				std::cout << "pos already occupied\n";
+				return false;
+			}
+				
+			//take the move  
+			MainBoard.get(pos.first,pos.second)=tag;
+			
+            //tell the enemy its coordinate  (maybe?)
+			enemy.callbackReportEnemy(pos.first,pos.second);   			
+			return true;
         }
+        
+        //added (06/06)
+        bool update_status(BoardInterface& t){  //if new updates, true
+        
+        	//1. if already has a wintag, do nothing
+			if(t.getWinTag()!=BoardInterface::Tag::None) return false;
+        
+        	//2. check: any winner?
+			//(1,1)
+			if(t.state(1,1)==BoardInterface::Tag::O || t.state(1,1)==BoardInterface::Tag::X){
+				//check horizontal, vertical, diagonal
+				if(t.state(1,0)==t.state(1,1) && t.state(1,0)==t.state(1,2)){
+        			t.setWinTag(t.state(1,1)); return true;
+        		}
+        		if(t.state(0,1)==t.state(1,1) && t.state(2,1)==t.state(1,1)){
+        			t.setWinTag(t.state(1,1)); return true;
+				}
+				if(t.state(0,0)==t.state(1,1) && t.state(0,0)==t.state(2,2)){
+					t.setWinTag(t.state(1,1)); return true;
+				}
+				if(t.state(0,2)==t.state(1,1) && t.state(0,0)==t.state(2,0)){
+					t.setWinTag(t.state(1,1)); return true;
+				}
+			}
+			//(0,0)
+        	if(t.state(0,0)==BoardInterface::Tag::O || t.state(0,0)==BoardInterface::Tag::X){
+				//check horizontal, vertical (diagonal already checked)
+				if(t.state(0,0)==t.state(0,1) && t.state(0,0)==t.state(0,2)){
+        			t.setWinTag(t.state(0,0)); return true;
+        		}
+        		if(t.state(0,0)==t.state(1,0) && t.state(0,0)==t.state(2,0)){
+        			t.setWinTag(t.state(0,0)); return true;
+				}
+			}
+			//(2,2)
+			if(t.state(2,2)==BoardInterface::Tag::O || t.state(2,2)==BoardInterface::Tag::X){
+				//only need to check vertical
+				if(t.state(0,2)==t.state(1,2) && t.state(0,2)==t.state(2,2)){
+					t.setWinTag(t.state(2,2)); return true;
+				}
+				if(t.state(2,0)==t.state(2,1) && t.state(2,0)==t.state(2,2)){
+					t.setWinTag(t.state(2,2)); return true;
+				}
+			}
+			
+			//3. no winners yet!
+			//   check if it's a tie (full!) (Ultraboard doesn't have full() function)
+			for (int i=0;i<3;++i)
+                for (int j=0;j<3;++j)
+                    if (b[i][j] == Tag::None)
+                    	return false
+            
+            //4. it is a tie (full and no winners)(update to tie)
+            t.setWinTag(BoardInterface::Tag::Tie);
+            return true;
+		}
 
-        bool checkGameover()
-        {  
-            //TODO: how to check whether gameover?
-
-
-
-
-
-
-
-
-
-
-
-            return true; // Gameover!
+        bool checkGameover()   //judge win or lose
+        {
+            //1.update board status
+            for(int i=0;i<3;i++){
+            	for(int j=0;j<3;j++){
+            		if(update_status(MainBoard.sub[i][j])){
+            			//2. if board is updated, then update the Ultraboard
+            			return update_status(MainBoard);
+					}
+				}
+			}
+			//2. no updates done, game continues
+            return false;
         }
 
         bool prepareState()
@@ -143,20 +182,15 @@ namespace TA
         void call(Func func, AIInterface *ptr, Args... args)
         {
             std::future_status status;
-
             auto val = std::async(std::launch::async, func, ptr, args...);
-            
             status = val.wait_for(std::chrono::milliseconds(m_runtime_limit));
 
-            if( status != std::future_status::ready )//if decision time > 1 then exit
+            if( status != std::future_status::ready )
             {
                 exit(-1);
             }
-
-            val.get();//void type
-        
+            val.get();
         }
-
 
         template<typename Func ,typename... Args, 
             std::enable_if_t< std::is_void<
@@ -164,18 +198,17 @@ namespace TA
                 >::value == false, int> = 0 >
         auto call(Func func, AIInterface *ptr, Args... args)
             -> std::invoke_result_t<Func, AIInterface, Args...>
+        //call(&AIInterface::queryWhereToPut, user, MainBoard);  
         {
             std::future_status status;
             auto val = std::async(std::launch::async, func, ptr, args...);
-
             status = val.wait_for(std::chrono::milliseconds(m_runtime_limit));
-            
+
             if( status != std::future_status::ready )
             {
                 exit(-1);
             }
-        
-            return val.get();//pair type
+            return val.get();
         }
 
         void putToGui(const char *fmt, ...)
@@ -197,10 +230,6 @@ namespace TA
         {
             return ptr->abi() == AI_ABI_VER;
         }
-
-
-
-
 
         int m_size;
         std::vector<int> m_ship_size;
