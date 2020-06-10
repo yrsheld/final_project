@@ -41,7 +41,7 @@ namespace TA
         void run()
         {
             gui->title();
-            int round = 0;
+            round = 0;
             if( !prepareState() ) return ;
 
             //Todo: Play Game
@@ -124,14 +124,6 @@ namespace TA
             //call (AIInterface *user)'s (queryWhereToPut function) to choose a place to set tag
             auto pos = call(&AIInterface::queryWhereToPut, user, MainBoard);
 
-            /*try
-            {
-                file << "(" << pos.first << "," << pos.second << ")\n";
-            }catch(...){
-                exit(-1);
-            }*/
-
-
            //check whether the pos is legal
 			//1. out of range
 			if(pos.first>8 || pos.first<0 || pos.second>8 || pos.second <0){
@@ -143,10 +135,20 @@ namespace TA
 				putToGui("pos already occupied\n");
 				return false;
 			}
-
+			//3. whether it meet the rules (in the correct board)
+			if(round>1 && !MainBoard.sub(last_coor.first%3,last_coor.second%3).full()){  
+			    if((pos.first/3)!=(last_coor.first%3) || (pos.second/3)!=(last_coor.second%3)){
+                    putToGui("incorrect board: (%d,%d) (%d,%d)\n",pos.first,pos.second,last_coor.first,last_coor.second);
+				    return false;
+                }
+            }
+            
 			//take the move  
 			MainBoard.get(pos.first,pos.second)=tag;
-
+			
+            //update the last move
+            last_coor=pos;
+            
             //tell the enemy its coordinate  (maybe?)
 			enemy->callbackReportEnemy(pos.first,pos.second);   			
 			return true;
@@ -324,5 +326,9 @@ namespace TA
         GUIInterface *gui;
 
         UltraBoard MainBoard;
+        
+        //record the last move
+        std::pair<int,int> last_coor;
+        int round;
     };
 }
